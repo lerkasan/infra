@@ -1,0 +1,27 @@
+---
+- name: Create certificates directory
+  ansible.builtin.file:
+    path: "./certificates"
+    state: directory
+
+- name: Generate an OpenSSL private key
+  community.crypto.openssl_privatekey:
+    path: "./certificates/{{ domain_name }}.key.pem"
+    size: "{{ key_size }}"
+    type: "{{ key_type }}"
+    backup: yes
+
+- name: Generate an OpenSSL Certificate Signing Request with Subject information
+  community.crypto.openssl_csr:
+    path: "./certificates/{{ domain_name }}.request.csr"
+    privatekey_path: "./certificates/{{ domain_name }}.key.pem"
+    country_name: "{{ country_name }}"
+    organization_name: "{{ organization_name }}"
+    common_name: "{{ domain_name }}"
+
+- name: Generate a Self Signed OpenSSL certificate
+  community.crypto.x509_certificate:
+    path: "./certificates/{{ domain_name }}.cert.pem"
+    privatekey_path: "./certificates/{{ domain_name }}.key.pem"
+    csr_path: "./certificates/{{ domain_name }}.request.csr"
+    provider: selfsigned

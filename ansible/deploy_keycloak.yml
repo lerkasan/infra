@@ -1,0 +1,56 @@
+---
+- name: Deploy Keycloak
+  hosts: keycloak_servers
+  become: yes
+
+  vars:
+    compose_path: ../keycloak/compose.yml
+    env_path: ../keycloak/.env
+    app_dir: keycloak
+    certificates_dir: ./certificates
+    keycloak_hostname: keycloak.lerkasan.de
+#    keycloak_hostname: "{{ groups['keycloak_servers'][0] }}"
+    keycloak_user_uid: 1000
+
+  environment:
+    DB_PASSWORD: "{{ lookup('aws_ssm', 'keycloak_db_password') }}"
+    KEYCLOAK_ADMIN_PASSWORD: "{{ lookup('aws_ssm', 'keycloak_admin_password') }}"
+    KEYCLOAK_HOST: "{{ keycloak_hostname }}"
+
+  tasks:
+    - name: Create keycloak dir
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+
+    - name: Copy compose file
+      ansible.builtin.copy:
+        src: "{{ compose_path }}"
+        dest: "{{ app_dir }}"
+        mode: '0644'
+
+    - name: Copy env file
+      ansible.builtin.copy:
+        src: "{{ env_path }}"
+        dest: "{{ app_dir }}"
+        mode: '0644'
+
+#    - name: Generate self-signed SSL certificate
+#      include_role:
+#        name: generate_self_signed_ssl_cert
+
+    - name: Generate Let's Encrypt SSL certificate
+      include_role:
+        name: generate_letsencrypt_ssl_cert
+
+    - name: Make keyckloak user be an owner of SSL key.pem and cert.pem files
+      ansible.builtin.file:
+        path: "{{ certificates_dir }}"
+        state: directory
+        owner: "{{ keycloak_user_uid }}"
+        recurse: yes
+
+    - name: Run docker compose to start Keycloak container
+      ansible.builtin.shell: docker compose up --detach
+      args:
+        chdir: "{{ app_dir }}"

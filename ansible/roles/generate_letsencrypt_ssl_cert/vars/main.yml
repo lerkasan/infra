@@ -1,0 +1,21 @@
+domain_name: keycloak.lerkasan.de
+#domain_name: "{{ groups['keycloak_servers'][0] }}"
+key_size: 4096
+key_type: RSA # Others include DSA, ECC, Ed25519, Ed448, X25519, X448
+passphrase: # Set if you want passphrase
+country_name: UA
+organization_name: JavaTestJunior
+
+certificates_dir: ./certificates
+letsencrypt_dir: /etc/letsencrypt
+letsencrypt_account_dir: "{{ letsencrypt_dir }}/account"
+letsencrypt_certs_dir: "{{ letsencrypt_dir }}/certs"
+letsencrypt_csrs_dir: "{{ letsencrypt_dir }}/csrs"
+letsencrypt_keys_dir: "{{ letsencrypt_dir }}/keys"
+letsencrypt_account_key: letsencrypt_account.key.pem
+
+acme_directory: https://acme-v02.api.letsencrypt.org/directory
+acme_version: 2
+acme_challenge_type: http-01
+acme_email: compcontrol@gmail.com
+remaining_days: 15

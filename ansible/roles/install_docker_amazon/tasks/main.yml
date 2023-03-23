@@ -1,0 +1,37 @@
+---
+- name: Install prerequisites for Docker repository
+  ansible.builtin.yum:
+    pkg: docker
+    state: latest
+
+- name: Create docker group
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: Install Docker Compose v2
+  ansible.builtin.file:
+    path: "{{ docker_plugins_dir }}"
+    state: directory
+
+- name: Download Docker Compose binary
+  ansible.builtin.uri:
+    url: "{{ docker_compose_url }}"
+    method: GET
+    dest: "{{ docker_plugins_dir }}/docker-compose"
+    follow_redirects: safe
+  register: result
+
+- name: Make Docker Compose binary executable
+  ansible.builtin.file:
+    path: "{{ docker_plugins_dir }}/docker-compose"
+    mode: a+x
+
+- name: Automatically start Docker and containerd on bootup
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop:
+    - docker.service
+    - containerd.service

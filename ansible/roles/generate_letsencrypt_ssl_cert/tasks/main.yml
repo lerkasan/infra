@@ -1,0 +1,115 @@
+---
+- name: "Create required directories in /etc/letsencrypt to store keys and certificates"
+  ansible.builtin.file:
+    path: "{{ letsencrypt_dir }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: u=rwx,g=x,o=x
+  loop:
+    - account
+    - certs
+    - csrs
+    - keys
+
+- name: Generate let's encrypt account key
+  community.crypto.openssl_privatekey:
+    path: "{{ letsencrypt_account_dir }}/{{ letsencrypt_account_key }}"
+    size: "{{ key_size }}"
+    type: "{{ key_type }}"
+    backup: yes
+
+- name: Generate let's encrypt private key with the default values (4096 bits, RSA)
+  community.crypto.openssl_privatekey:
+    path: "{{letsencrypt_keys_dir}}/{{ domain_name }}.key.pem"
+
+- name: Generate an OpenSSL Certificate Signing Request
+  community.crypto.openssl_csr:
+    path: "{{letsencrypt_csrs_dir}}/{{ domain_name }}.csr"
+    privatekey_path: "{{letsencrypt_keys_dir}}/{{ domain_name }}.key.pem"
+    common_name: "{{domain_name}}"
+
+- name: Create a challenge for {{ domain_name }} using a account key file.
+  community.crypto.acme_certificate:
+    acme_directory: "{{ acme_directory }}"
+    acme_version: "{{ acme_version }}"
+    account_email: "{{ acme_email }}"
+    terms_agreed: yes
+    account_key_src: "{{ letsencrypt_account_dir }}/{{ letsencrypt_account_key }}"
+    challenge: "{{ acme_challenge_type }}"
+    csr: "{{ letsencrypt_csrs_dir }}/{{ domain_name }}.csr"
+    cert: "{{ letsencrypt_certs_dir }}/{{ domain_name }}.crt"
+#    remaining_days: "{{ remaining_days }}"
+  register: acme_challenge
+
+# Create the directory to hold the validation token
+- name: "Create .well-known/acme-challenge directory"
+  become: yes
+  file:
+    path: "{{ certificates_dir }}/.well-known/acme-challenge"
+    state: directory
+    owner: root
+    group: root
+    mode: u=rwx,g=rx,o=rx
+
+# Copy the necessary files for the http-01 challenge
+- name: Perform steps to fulfill the {{ acme_challenge_type }} challenge
+  ansible.builtin.copy:
+    dest: "{{ certificates_dir }}/{{ acme_challenge['challenge_data'][item]['http-01']['resource'] }}"
+    content: "{{ acme_challenge['challenge_data'][item]['http-01']['resource_value'] }}"
+  loop:
+    - "{{ domain_name }}"
+  when: acme_challenge is changed and domain_name|string in acme_challenge['challenge_data']
+
+- name: Start Nginx container
+  community.docker.docker_container:
+    name: letsencrypt-nginx
+    image: nginx:latest
+    state: started
+    published_ports:
+      - 80:80
+    volumes:
+      - "{{ certificates_dir }}/{{ acme_challenge['challenge_data'][item]['http-01']['resource'] }}:/usr/share/nginx/html/{{ acme_challenge['challenge_data'][item]['http-01']['resource'] }}:ro"
+  loop:
+    - "{{ domain_name }}"
+
+- name: Let the challenge be validated and retrieve the cert and intermediate certificate
+  community.crypto.acme_certificate:
+    account_key_src: "{{ letsencrypt_account_dir }}/{{ letsencrypt_account_key }}"
+    csr: "{{ letsencrypt_csrs_dir }}/{{ domain_name }}.csr"
+    cert: "{{ letsencrypt_certs_dir }}/{{ domain_name }}.crt"
+    acme_directory: "{{ acme_directory }}"
+    acme_version: "{{ acme_version }}"
+    account_email: "{{ acme_email }}"
+    challenge: "{{ acme_challenge_type }}"
+    fullchain: "{{ letsencrypt_certs_dir }}/{{ domain_name }}-fullchain.crt"
+    chain: "{{ letsencrypt_certs_dir }}/{{ domain_name }}-intermediate.crt"
+#    remaining_days: "{{ remaining_days }}"
+    data: "{{ acme_challenge }}"
+  when: acme_challenge is changed
+
+- name: Stop Nginx container
+  community.docker.docker_container:
+    name: letsencrypt-nginx
+    image: nginx:latest
+    state: stopped
+
+- name: Copy let's encrypt certificate from {{ letsencrypt_certs_dir }} to {{ certificates_dir }}
+  ansible.builtin.copy:
+    remote_src: true
+    src:  "{{ letsencrypt_certs_dir }}/{{ domain_name }}.crt"
+    dest: "{{ certificates_dir }}/{{ domain_name }}.cert.pem"
+    owner: 1000
+    group: root
+    mode: '0600'
+    backup: yes
+
+- name: Copy let's encrypt key from {{ letsencrypt_certs_dir }} to {{ certificates_dir }}
+  ansible.builtin.copy:
+    remote_src: true
+    src:  "{{letsencrypt_keys_dir}}/{{ domain_name }}.key.pem"
+    dest: "{{ certificates_dir }}/{{ domain_name }}.key.pem"
+    owner: 1000
+    group: root
+    mode: '0600'
+    backup: yes

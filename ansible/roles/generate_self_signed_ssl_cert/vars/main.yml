@@ -1,0 +1,7 @@
+domain_name: www2.lerkasan.de
+#domain_name: "{{ groups['keycloak_servers'][0] }}"
+key_size: 4096
+key_type: RSA # Others include DSA, ECC, Ed25519, Ed448, X25519, X448
+passphrase: # Set if you want passphrase
+country_name: UA
+organization_name: JavaTestJunior

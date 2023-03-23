@@ -1,0 +1,154 @@
+{
+  "realm": "spring-boot-quickstart",
+  "enabled": true,
+  "requiredCredentials": [
+    "password"
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "alice"
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "jdoe",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "jdoe"
+        }
+      ],
+      "realmRoles": [
+        "user",
+        "user-premium"
+      ]
+    },
+    {
+      "username": "service-account-app-authz-springboot",
+      "enabled": true,
+      "serviceAccountClientId": "app-authz-springboot",
+      "clientRoles": {
+        "app-authz-springboot": [
+          "uma_protection"
+        ]
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "User privileges"
+      },
+      {
+        "name": "user-premium",
+        "description": "User premium privileges"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "app-authz-springboot",
+      "enabled": true,
+      "baseUrl": "http://localhost:8080",
+      "adminUrl": "http://localhost:8080",
+      "bearerOnly": false,
+      "redirectUris": [
+        "http://localhost:8080/*"
+      ],
+      "secret": "secret",
+      "authorizationServicesEnabled": true,
+      "authorizationSettings": {
+        "allowRemoteResourceManagement": false,
+        "policyEnforcementMode": "ENFORCING",
+        "resources": [
+          {
+            "name": "Protected Resource",
+            "uri": "/protected/*"
+          },
+          {
+            "name": "Premium Resource",
+            "uri": "/protected/premium/*"
+          },
+          {
+            "name": "Default Resource",
+            "uri": "/*"
+          },
+          {
+            "name": "User Resource",
+            "type": "user-resource"
+          }
+        ],
+        "policies": [
+          {
+            "name": "Default Policy",
+            "description": "A policy that grants access only for users within this realm",
+            "type": "role",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "roles": "[{\"id\":\"user\",\"required\":false}]"
+            }
+          },
+          {
+            "name": "Only Premium User Policy",
+            "type": "role",
+            "logic": "POSITIVE",
+            "decisionStrategy": "UNANIMOUS",
+            "config": {
+              "roles": "[{\"id\":\"user-premium\",\"required\":false}]"
+            }
+          },
+          {
+            "name": "Only User Policy",
+            "type": "role",
+            "logic": "POSITIVE",
+            "decisionStrategy": "UNANIMOUS",
+            "config": {
+              "roles": "[{\"id\":\"user\",\"required\":false}]"
+            }
+          },
+          {
+            "name": "Default Resource Permission",
+            "type": "resource",
+            "logic": "POSITIVE",
+            "decisionStrategy": "UNANIMOUS",
+            "config": {
+              "resources": "[\"Default Resource\"]",
+              "applyPolicies": "[\"Default Policy\"]"
+            }
+          },
+          {
+            "name": "Premium Resource Permission",
+            "type": "resource",
+            "logic": "POSITIVE",
+            "decisionStrategy": "UNANIMOUS",
+            "config": {
+              "resources": "[\"Premium Resource\"]",
+              "applyPolicies": "[\"Only Premium User Policy\"]"
+            }
+          },
+          {
+            "name": "Protected Resource Permission",
+            "type": "resource",
+            "logic": "POSITIVE",
+            "decisionStrategy": "UNANIMOUS",
+            "config": {
+              "resources": "[\"Protected Resource\"]",
+              "applyPolicies": "[\"Only User Policy\"]"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
