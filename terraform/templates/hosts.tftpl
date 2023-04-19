@@ -1,0 +1,8 @@
+[bastions]
+${bastion}
+
+[keycloak_servers]
+%{ for server in keycloak_servers ~}
+${server}
+%{ endfor ~}
+

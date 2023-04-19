@@ -13,6 +13,10 @@
     keycloak_user_uid: 1000
 
   environment:
+
+    DB_HOST: "{{ lookup('aws_ssm', 'keycloak_db_host') }}"
+    DB_NAME: "{{ lookup('aws_ssm', 'keycloak_db_name') }}"
+    DB_USER: "{{ lookup('aws_ssm', 'keycloak_db_username') }}"
     DB_PASSWORD: "{{ lookup('aws_ssm', 'keycloak_db_password') }}"
     KEYCLOAK_ADMIN_PASSWORD: "{{ lookup('aws_ssm', 'keycloak_admin_password') }}"
     KEYCLOAK_HOST: "{{ keycloak_hostname }}"

@@ -28,17 +28,17 @@ services:
       - ../certificates/${KEYCLOAK_HOST}.cert.pem:/opt/keycloak/conf/cert.pem
       - ../certificates/${KEYCLOAK_HOST}.key.pem:/opt/keycloak/conf/key.pem
     ports:
-      - "${KEYCLOAK_HTTPS_PORT}:8443"
-#      - "${KEYCLOAK_HTTP_PORT}:8080"
-    depends_on:
-      - postgres
+      - "${KEYCLOAK_HTTPS_PORT}:443"
 
-  postgres:
-    hostname: ${DB_HOST}
-    image: postgres
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - ./db_data:/var/lib/postgresql/data
+#    depends_on:
+#      - postgres
+#
+#  postgres:
+#    hostname: ${DB_HOST}
+#    image: postgres
+#    environment:
+#      POSTGRES_DB: ${DB_NAME}
+#      POSTGRES_USER: ${DB_USER}
+#      POSTGRES_PASSWORD: ${DB_PASSWORD}
+#    volumes:
+#      - ./db_data:/var/lib/postgresql/data

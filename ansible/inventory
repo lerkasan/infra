@@ -1,5 +1,0 @@
-[keycloak_servers]
-34.205.15.249
-
-[keycloak_servers:vars]
-ansible_user=ec2-user
